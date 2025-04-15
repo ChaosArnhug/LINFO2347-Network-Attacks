@@ -1,0 +1,12 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table ip r1 {
+    chain FORWARD {
+        type filter hook forward priority 0; policy drop;
+        ip saddr 10.1.0.0/24 accept;
+        ct state { established, related } accept;
+    }
+
+}
