@@ -1,4 +1,4 @@
-from scapy.all import IP, ICMP, sr, conf, ARP, Ether, srp, TCP
+from scapy.all import IP, ICMP, sr, conf, ARP, Ether, srp, TCP, UDP
 import ipaddress
 import sys
 import logging
@@ -86,13 +86,36 @@ def xmas_tree_scan():
         for s, r in ans:
             if r.haslayer(TCP) and r[TCP].flags == 0x14:  # RST
                 print(f"Port {port} is CLOSED")
-        
+
+def udp_scan():
+    try:
+        ip = input("Enter the IP address to scan: ").strip()
+        ports = input("Enter ports to scan (comma-separated): ").split(',')
+        ports = [int(p.strip()) for p in ports]
+        ipaddress.ip_address(ip)
+
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    print(f"Scanning {ip} for open UDP ports...\n")
+
+    for port in ports:
+        pkt = IP(dst=ip) / UDP(dport=port)
+        resp = sr(pkt, timeout=2, verbose=0)[0]
+
+        for s, r in resp:
+            if r.haslayer(ICMP) and r[ICMP].type == 3 and r[ICMP].code == 3:
+                print(f"Port {port} is CLOSED")
+
 if __name__ == "__main__":
     print("What attack do you want to perform?\n")
     print("1. Ping Sweep\n")
     print("2. ARP Ping Sweep\n")
     print("3. TCP SYN Port Scan\n")
     print("4. Xmas Tree Scan\n")
+    print("5. UDP Scan\n")
+    print("6. Exit\n")
     
 
     choice = input("Enter your choice: ")
@@ -107,6 +130,13 @@ if __name__ == "__main__":
 
     elif choice == '4':
         xmas_tree_scan()
+
+    elif choice == '5':
+        udp_scan()
+
+    elif choice == '6':
+        print("Exiting...")
+        sys.exit(0)
 
     else:
         print("Invalid choice.")
