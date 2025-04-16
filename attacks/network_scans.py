@@ -1,4 +1,4 @@
-from scapy.all import IP, ICMP, sr, conf, ARP, Ether, srp
+from scapy.all import IP, ICMP, sr, conf, ARP, Ether, srp, TCP
 import ipaddress
 import sys
 import logging
@@ -24,7 +24,7 @@ def ping_sweep():
         
 def arp_ping_sweep():
     try:
-        network = input("What's the network to scan (ie: 10.1.0.0/24)? ").strip().lower();
+        network = input("What's the network to scan (ie: 10.1.0.0/24)? ").strip().lower()
         net = ipaddress.ip_network(network)
     
     except ValueError as e:
@@ -36,11 +36,38 @@ def arp_ping_sweep():
     pkt = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=targets)
     ans, _ = srp(pkt, timeout=1, verbose=0)
     ans.summary(lambda s, r: r.sprintf("{ARP: %ARP.psrc% is alive with MAC %ARP.hwsrc%}"))
+
+def tcp_syn_port_scan():
+    try:
+        ip = input("Enter the IP address to scan: ")
+        ports = input("Enter the ports to scan (comma-separated): ").split(',')
+        ports = [int(port.strip()) for port in ports]
+    
+    except ValueError as e:
+        print(f"Invalid input: {e}")
+        return
+
+    print(f"Scanning {ip} for open ports...\n")
+    for port in ports:
+        if not (1 <= port <= 65535):
+            print(f"Port {port} is out of range. Skipping...")
+            continue
+        pkt = IP(dst=ip) / TCP(dport=port, flags='S')
+        ans, _ = sr(pkt, timeout=1, verbose=0)
+        for s, r in ans:
+            if r.haslayer(TCP) and r[TCP].flags == 0x12:  # SYN-ACK
+                print(f"Port {s[TCP].dport} is OPEN")
+
+            #elif r.haslayer(TCP) and r[TCP].flags == 0x14:  # RST-ACK
+                #print(f"Port {s[TCP].dport} is CLOSED")
+
+
         
 if __name__ == "__main__":
     print("What attack do you want to perform?\n")
     print("1. Ping Sweep\n")
     print("2. ARP Ping Sweep\n")
+    print("3. TCP SYN Port Scan\n")
     
 
     choice = input("Enter your choice: ")
@@ -49,6 +76,9 @@ if __name__ == "__main__":
 
     elif choice == '2':
         arp_ping_sweep()
+
+    elif choice == '3':
+        tcp_syn_port_scan()
 
     else:
         print("Invalid choice.")
