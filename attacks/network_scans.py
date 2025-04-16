@@ -39,12 +39,13 @@ def arp_ping_sweep():
 
 def tcp_syn_port_scan():
     try:
-        ip = input("Enter the IP address to scan: ")
-        ports = input("Enter the ports to scan (comma-separated): ").split(',')
+        ip = input("Enter the IP address to scan: ").strip()
+        ports = input("Enter ports to scan (comma-separated): ").split(',')
         ports = [int(port.strip()) for port in ports]
-    
+        ipaddress.ip_address(ip)
+        
     except ValueError as e:
-        print(f"Invalid input: {e}")
+        print(f"Error: {e}")
         return
 
     print(f"Scanning {ip} for open ports...\n")
@@ -61,13 +62,37 @@ def tcp_syn_port_scan():
             #elif r.haslayer(TCP) and r[TCP].flags == 0x14:  # RST-ACK
                 #print(f"Port {s[TCP].dport} is CLOSED")
 
+def xmas_tree_scan():
+    try:
+        ip = input("Enter the IP address to scan: ").strip()
+        ports = input("Enter ports to scan (comma-separated): ").split(',')
+        ports = [int(port.strip()) for port in ports]
+        ipaddress.ip_address(ip)
 
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    print(f"Running Xmas Tree scan on {ip}...\n")
+
+    for port in ports:
+        if not (1 <= port <= 65535):
+            print(f"Port {port} is out of range. Skipping...")
+            continue
+
+        pkt = IP(dst=ip) / TCP(dport=port, flags="FPU")
+        ans, _ = sr(pkt, timeout=1, verbose=0)
+
+        for s, r in ans:
+            if r.haslayer(TCP) and r[TCP].flags == 0x14:  # RST
+                print(f"Port {port} is CLOSED")
         
 if __name__ == "__main__":
     print("What attack do you want to perform?\n")
     print("1. Ping Sweep\n")
     print("2. ARP Ping Sweep\n")
     print("3. TCP SYN Port Scan\n")
+    print("4. Xmas Tree Scan\n")
     
 
     choice = input("Enter your choice: ")
@@ -79,6 +104,9 @@ if __name__ == "__main__":
 
     elif choice == '3':
         tcp_syn_port_scan()
+
+    elif choice == '4':
+        xmas_tree_scan()
 
     else:
         print("Invalid choice.")
