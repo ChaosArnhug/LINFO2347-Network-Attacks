@@ -104,7 +104,7 @@ def stop_services(net: Mininet) -> None:
     # FTP server
     info(net['ftp'].cmd("killall vsftpd"))
 
-def apply_nftables_rules(net: Mininet, hostnames: list, rules_path: str -> None:
+def apply_nftables_rules(net: Mininet, hostnames: list, rules_path: str) -> None:
     for host in hostnames:
         info(f"Applying nftables rules to {host}\n")
         net[host].cmd(f'cp {rules_path} /tmp/rules.nft')
