@@ -159,7 +159,6 @@ After spending quite a few hours on the question, we couldn't come up with `nfta
 - High-frequency flooding, rate limiting can't counter the attack
 - Dual-sided poisoning means full MITM, not just cache pollution.
 
-
 So the practical idea to defend against such nasty arp poisoning is to:
 
 1. Either hardcode use static arp entries (albeit not simple ones because simple `ws` arp is not sufficent as explained earlier)
@@ -169,6 +168,34 @@ So the practical idea to defend against such nasty arp poisoning is to:
 3. Hardcode MAC addresses and make all MAC addresses static (basically the idea would be to completely disable arp)
 
 4. **Use ipv6 but this seems to be outside the scope of the project, but no one should be still using ipv4 arp**
+
+Here's our very simplistic `static arp` using `arp` directly:
+
+```
+mininet> r1 sudo ~/Desktop/LINFO2347/basic/set_static_arp.sh
+Running on Router (r1) (10.1.0.1). Setting static ARP for 10.1.0.3.
+Executing: sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
+Verifying ARP entry:
+10.1.0.3                 ether   e2:b2:14:9d:90:5c   CM                    r1-eth0
+Static ARP entry set successfully.
+
+
+mininet> ws3 sudo ~/Desktop/LINFO2347/basic/set_static_arp.sh
+Running on Workstation (ws3) (10.1.0.3). Setting static ARP for 10.1.0.1.
+Executing: sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
+Verifying ARP entry:
+10.1.0.1                 ether   ca:31:e1:f5:1d:01   CM                    ws3-eth0
+Static ARP entry set successfully.
+```
+
+With this "defense" script we cancel out arp poisoning completely on ws3 for instance. What the whole script does is basically run these commands:
+
+```
+mininet> ws3 sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
+
+mininet> r1 sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
+```
+
 
 ### SYN Flooding
 
