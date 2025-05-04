@@ -94,6 +94,9 @@ Now from `internet` we want to then launch the attack:
 root@vbox:~/Desktop/LINFO2347# python3 ~/Desktop/LINFO2347/attacks/reflected_ddos.py
 ```
 
+This is a screenshot of the attack:
+
+![dns ddos](./screenshots/dns_ddos.png)
 
 Optionally but you can check the DNS IN/OUT traffic to confirm/debug:
 
@@ -115,7 +118,7 @@ tcpdump -i dns-eth0 -n 'udp and dst host 10.1.0.2 and src port 5353'
 
 #### Defense
 
-To defend see the `nftable` rule file in `/basic/basic_dmz.nft` `/basic/basic_r1.nft`. They can be activated in the topology directly in `/basic/topo_basic.py`
+
 
 ### ARP Poisoning (MITM)
 
@@ -161,13 +164,11 @@ After spending quite a few hours on the question, we couldn't come up with `nfta
 
 So the practical idea to defend against such nasty arp poisoning is to:
 
-1. Either hardcode use static arp entries (albeit not simple ones because simple `ws` arp is not sufficent as explained earlier)
+1. Either hardcode use static arp entries. In otherwords Hardcode MAC addresses and make all MAC addresses static (basically the idea would be to completely remvoe the purpose of arp)
 
-2. Use other tools than `nftables`, `nftables` are not appropriate to counter arp cache poison, it's more of a layer 3/layer 4 approach but with scapy we are at the lowest level possible forging layer 2 packets.
+2. `nftables` are not the best way to counter arp cache poison, inherently it's the same hardcoding of mac addresses but inherently how to know who is what if the packets are forged and sent out (with scapy we are at the lowest level possible forging layer 2 packets). Since the attacker can send packets with the MAC address of the router `nftables` are too weak and can be bypassed by the attack script we wrote (basically we couldn't figure out a way to counter our own attack with `ntfables` and the solution can't be simple when you take into account L2 source spoofing).
 
-3. Hardcode MAC addresses and make all MAC addresses static (basically the idea would be to completely disable arp)
-
-4. **Use ipv6 but this seems to be outside the scope of the project, but no one should be still using ipv4 arp**
+3. **Use ipv6 but this seems to be outside the scope of the project, but no one should still be using ipv4 arp**
 
 Here's our very simplistic `static arp` using `arp` directly:
 
@@ -195,7 +196,6 @@ mininet> ws3 sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
 
 mininet> r1 sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
 ```
-
 
 ### SYN Flooding
 
