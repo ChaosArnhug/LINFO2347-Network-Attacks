@@ -78,9 +78,9 @@ To defend see the `nftable` rule file in `/basic/network_scans.nft`. They can be
 After mininet is up and running:
 
 ```
-mininet> xterm internet
-mininet> xterm ws2
+mininet> xterm internet ws2 r2 dns
 ```
+`NOTE`: this attacks involves the victim (a workstation), the entrance router (r2), the dns server within the DMZ and the internet (the attacker)
 
 From `ws2` (the victim) we want to capture the traffic and inspect the DoS occuring through the DNS:
 
@@ -94,11 +94,12 @@ Now from `internet` we want to then launch the attack:
 root@vbox:~/Desktop/LINFO2347# python3 ~/Desktop/LINFO2347/attacks/reflected_ddos.py
 ```
 
-This is a screenshot of the attack:
+This is a screenshot of the attack with **zero protection enabled**:
 
-![dns ddos](./screenshots/dns_ddos.png)
+![dns ddos](./screenshots/dns_ddos_no_protection.png)
+`NOTE`: We can see the workstation being targetted by our own DNS server, with the UDP packets coming through both r2 and r1.
 
-Optionally but you can check the DNS IN/OUT traffic to confirm/debug:
+*Optionally* to check the DNS IN/OUT traffic to confirm/debug:
 
 ```
 mininet> xterm dns
@@ -118,7 +119,34 @@ tcpdump -i dns-eth0 -n 'udp and dst host 10.1.0.2 and src port 5353'
 
 #### Defense
 
+For the defense, they are both located on the two routers in `/basic/basic_r2.nft` and `/basic/basic_r1.nft`.
 
+On `r2` (also known as the main entrance):
+
+```
+iifname "r2-eth0" ip saddr 10.1.0.0/24 drop;
+iifname "r2-eth0" ip saddr 10.12.0.0/24 drop;
+```
+
+What it catches: Any inbound packet on the internet interface (r2-eth0) that claims to come from your internal LAN (10.1.0.0/24) or DMZ (10.12.0.0/24).
+
+This is a screenshot of the attack with **full protection enabled**:
+
+![dns ddos](./screenshots/dns_ddos_full_protection.png)
+
+But `r1` also protects our `ws` from unsolicited DNS replies.
+
+An attacker on the Internet forges a query with src=10.1.0.2 (ws2). That forged query never hit r1 in the first place (it goes straight to r2 -> DMZ).
+
+The DNS server’s reply comes back to r1 with src=10.12.0.20 and dst=10.1.0.2.
+
+It doesn't blcok legitimate requests from `ws2`.
+ws2 (10.1.0.2) sends a DNS query -> r1.
+On r1, ip saddr 10.1.0.0/24 accept matches immediately, so the query is forwarded onward into the DMZ
+
+This is a screenshot of the attack with **only r1 protection enabled**:
+
+![dns ddos](./screenshots/dns_ddos_onlyr1.png)
 
 ### ARP Poisoning (MITM)
 
@@ -156,7 +184,7 @@ After the attack:
 
 ### Defense
 
-After spending quite a few hours on the question, we couldn't come up with `nftables` rules defending against our script. We could theoretically dumb down the attack/arp poisoning (by not targeting the router as well) but dual-sided poisoning is needed for a full MITM.
+After spending quite a few hours on the question, we couldn't come up with `nftables` rules defending against our own script. We could theoretically dumb down the attack/arp poisoning (by not targeting the router as well) but dual-sided poisoning is needed for a full MITM.
 
 - Dynamic discovery + forged-but-accurate packets = can’t be told apart by simple IP/MAC rules.
 - High-frequency flooding, rate limiting can't counter the attack
