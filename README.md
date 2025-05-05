@@ -237,7 +237,7 @@ After spending quite a few hours on the question, we couldn't come up with `nfta
 
 So the practical idea to defend against such nasty arp poisoning is to:
 
-1. Either hardcode use static arp entries. In otherwords Hardcode MAC addresses and make all MAC addresses static (basically the idea would be to completely remvoe the purpose of arp)
+1. Either use static (hardcoded) arp entries (not that great but surely effective way to deal with arp poison).
 
 2. `nftables` are not the best way to counter arp cache poison, inherently it's the same hardcoding of mac addresses but inherently how to know who is what if the packets are forged and sent out (with scapy we are at the lowest level possible forging layer 2 packets). Since the attacker can send packets with the MAC address of the router `nftables` are too weak and can be bypassed by the attack script we wrote (basically we couldn't figure out a way to counter our own attack with `ntfables` and the solution can't be simple when you take into account L2 source spoofing).
 
