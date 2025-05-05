@@ -12,6 +12,7 @@ table ip r2 {
         type filter hook forward priority 0; policy drop;
         iifname "r2-eth0" ip saddr 10.1.0.0/24 drop;
         iifname "r2-eth0" ip saddr 10.12.0.0/24 drop;
+        iifname "r2-eth0" tcp flags & (fin|psh|urg) == (fin|psh|urg) drop
         ip saddr 10.1.0.0/24 accept;
         ip daddr {10.12.0.10, 10.12.0.20, 10.12.0.30, 10.12.0.40} accept;
         ct state {established, related} accept;

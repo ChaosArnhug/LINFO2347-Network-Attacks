@@ -1,5 +1,26 @@
 # LINFO2347: Network Attacks
 
+Group 7: `MEUNIER Arnaud` & `HENNEN Cyril`
+
+## Table of Contents
+
+- [LINFO2347: Network Attacks](#linfo2347-network-attacks)
+- [Setup](#setup)
+  - [Installing required material (from Debian 12)](#installing-required-material-from-debian-12)
+  - [Starting Mininet](#starting-mininet)
+  - [Clearing Mininet](#clearing-mininet)
+- [Network scans (Xmas scan)](#network-scans-xmas-scan)
+  - [Attack](#attack-1)
+  - [Defense](#defense-1)
+- [DNS Reflection (DoS)](#dns-reflection-dos)
+  - [Attack](#attack-2)
+  - [Defense](#defense-2)
+- [ARP Poisoning (MITM)](#arp-poisoning-mitm)
+  - [Attack](#attack-3)
+  - [Defense](#defense-3)
+- [SYN Flooding](#syn-flooding)
+  - [Attack](#attack-4)
+  - [Defense](#defense-4)
 
 ## Setup
 
@@ -23,14 +44,18 @@ sudo systemctl restart dnsmasq
 #(to check everything is ok)
 sudo systemctl status dnsmasq.service
 
-# Note make sure dnsmasq is using port 5353 AND UNCOMENT the 'no-resolv' line #no-resolv (around line 70) in /etc/dnsmasq.conf
+# Note dnsmasq is using port 5353 AND UNCOMENT the 'no-resolv' line #no-resolv (around line 70) in /etc/dnsmasq.conf
 ```
 
-Then to start the `mininet`
+### Starting mininet
+
+Then to start `mininet`
 
 ```
 sudo -E python3 ~/Desktop/LINFO2347/basic/topo_basic.py 
 ```
+
+### Clearing mininet
 
 To clear:
 
@@ -38,14 +63,21 @@ To clear:
 sudo mn -c
 ```
 
-## Attacks
+## Network scans (Xmas scan)
 
-### Network scans
+### Attack
 
-After mininet is up and running:
+The Xmas scan works by sending a TCP packet with the **FIN**, **PSH** and **URG** flags set. And according to the RFC:
+- If a port is closed, the host should **reply** with a **RST** (reset)
+- If a port is open, there should be no response (same for filtered)
+
+Purpose? Identifying hosts that are alive + indication that the network is not well protected/vulnerable.
+In the example here port 443 is closed so the attacker knows it's probably running a HTTP server as well.
+
+To launch an attack, with the mininet up and running:
 
 ```
-mininet> ws2 python3 ~/Desktop/LINFO2347/attacks/network_scans.py
+mininet> internet sudo -E python3 ~/Desktop/LINFO2347/attacks/network_scans.py
 
 Select attack:
  1. ICMP Ping Sweep
@@ -54,26 +86,37 @@ Select attack:
  4. Xmas Tree Scan
  5. UDP Scan
  6. Exit
-Choice: 
+Choice: 4
+Target IP [10.12.0.10]: 10.12.0.10
+Ports [22,80,443]: 22,80,443
+
+[*] Xmas Tree Scan on 10.12.0.10 ports 22,80,443
+  → TCP port 22 OPEN|FILTERED (no answer)         
+  → TCP port 80 OPEN|FILTERED (no answer)         
+  → TCP port 443 CLOSED                           
+[Xmas Tree Scan] Terminated.
 ```
 
-If you choose 2 for instance:
+So the internet did a Xmas scan on our HTTP server and found out that it's alive and it's likely a HTTP server.
+
+![xmas not protected](./screenshots/xmas_not_protected.png)
+
+### Defense
+
+To defend this attack from hitting our DMZ, we need to add a rule on `r2` (DMZ <-> Internet)
 
 ```
-Choice: 2
-Network to ARP-sweep [10.1.0.0/24]: 
-
-[*] ARP Ping sweep on 10.1.0.0/24 (batch size: 100)
-  → 10.1.0.1 is alive (MAC de:17:94:f0:e5:b2)               
-  → 10.1.0.3 is alive (MAC f2:2c:eb:66:29:93)               
-[ARP Ping sweep] Terminated: 2 IPs found 
+iifname "r2-eth0" tcp flags & (fin|psh|urg) == (fin|psh|urg) drop
 ```
 
-#### Defense
+What it catches: TCP packets with the **FIN**, **PSH** and **URG** flags set.
+What it does: it drops them!
 
-To defend see the `nftable` rule file in `/basic/network_scans.nft`. They can be activated in the topology directly in `/basic/topo_basic.py`
+![xmas protected](./screenshots/xmas_protected.png)
 
-### DNS Reflection (DoS)
+## DNS Reflection (DoS)
+
+### Attack
 
 After mininet is up and running:
 
@@ -117,7 +160,7 @@ For outgoing:
 tcpdump -i dns-eth0 -n 'udp and dst host 10.1.0.2 and src port 5353'
 ```
 
-#### Defense
+### Defense
 
 For the defense, they are both located on the two routers in `/basic/basic_r2.nft` and `/basic/basic_r1.nft`.
 
@@ -148,7 +191,9 @@ This is a screenshot of the attack with **only r1 protection enabled**:
 
 ![dns ddos](./screenshots/dns_ddos_onlyr1.png)
 
-### ARP Poisoning (MITM)
+## ARP Poisoning (MITM)
+
+### Attack
 
 For this attack we need `ws2` and `ws3`. 
 
@@ -225,7 +270,9 @@ mininet> ws3 sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
 mininet> r1 sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
 ```
 
-### SYN Flooding
+## SYN Flooding
+
+### Attack
 
 ### Defense
 
