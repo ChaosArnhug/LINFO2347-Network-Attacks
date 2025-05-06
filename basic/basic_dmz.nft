@@ -2,6 +2,16 @@
 
 flush ruleset
 
+chain INPUT {
+    type filter hook input priority 0; policy drop;
+    iifname lo accept;
+    ct state {established, related} accept;
+    ip protocol icmp icmp type echo-request accept;
+
+    tcp flags syn ct state new limit rate 200/second burst 50 accept;
+    tcp flags syn ct state new drop;
+}
+
 table ip dmz {
     chain OUTPUT {
         type filter hook output priority 0; policy drop;
