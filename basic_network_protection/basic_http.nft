@@ -1,25 +1,24 @@
 #!/usr/sbin/nft -f
 
-flush ruleset
+flush ruleset;
 
 table ip dmz {
-
-    chain INPUT {
+    chain input {
         type filter hook input priority 0; policy drop;
-        iifname lo accept;
+        iifname "lo" accept;
         tcp dport 80 accept;
-        ct state {established, related} accept;
+        ct state { established, related } accept;
         ip protocol icmp icmp type echo-request accept;
     }
 
-    chain OUTPUT {
+    chain output {
         type filter hook output priority 0; policy drop;
-        oifname lo accept;
-        ct state {established, related} accept;
+        oifname "lo" accept;
+        ct state { established, related } accept;
         ip protocol icmp icmp type echo-reply accept;
     }
 
-    chain FORWARD {
+    chain forward {
         type filter hook forward priority 0; policy drop;
     }
 }
