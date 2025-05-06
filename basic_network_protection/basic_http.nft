@@ -6,23 +6,20 @@ table ip dmz {
 
     chain INPUT {
         type filter hook input priority 0; policy drop;
-
         iifname lo accept;
-        tcp dport 80 accept
+        tcp dport 80 accept;
         ct state {established, related} accept;
         ip protocol icmp icmp type echo-request accept;
     }
 
     chain OUTPUT {
         type filter hook output priority 0; policy drop;
-        
         oifname lo accept;
         ct state {established, related} accept;
-        ip protocol icmp icmp type echo-reply accept;    
+        ip protocol icmp icmp type echo-reply accept;
     }
 
     chain FORWARD {
         type filter hook forward priority 0; policy drop;
     }
-
 }

@@ -120,12 +120,12 @@ def run():
     start_services(net)
 
     # Apply rules
-    apply_nftables_rules(net, ['r1'],   'basic_r1.nft')
-    apply_nftables_rules(net, ['r2'],   'basic_r2.nft')
-    apply_nftables_rules(net, ['http'],   'basic_http.nft')
-    apply_nftables_rules(net, ['dns'],   'basic_dns.nft')
-    apply_nftables_rules(net, ['ftp'],   'basic_ftp.nft')
-    apply_nftables_rules(net, ['ntp'],   'basic_ntp.nft')
+    apply_nftables_rules(net, ['r1'], 'basic_r1.nft')
+    apply_nftables_rules(net, ['r2'], 'basic_r2.nft')
+    apply_nftables_rules(net, ['http'], 'basic_http.nft')
+    apply_nftables_rules(net, ['dns'], 'basic_dns.nft')
+    apply_nftables_rules(net, ['ftp'], 'basic_ftp.nft')
+    apply_nftables_rules(net, ['ntp'], 'basic_ntp.nft')
 
     net.start()
     CLI(net)
@@ -140,6 +140,14 @@ def ping_all():
     add_routes(net)
     stop_services(net)
     start_services(net)
+
+    # Apply rules
+    apply_nftables_rules(net, ['r1'], 'basic_r1.nft')
+    apply_nftables_rules(net, ['r2'], 'basic_r2.nft')
+    apply_nftables_rules(net, ['http'], 'basic_http.nft')
+    apply_nftables_rules(net, ['dns'], 'basic_dns.nft')
+    apply_nftables_rules(net, ['ftp'], 'basic_ftp.nft')
+    apply_nftables_rules(net, ['ntp'], 'basic_ntp.nft')
 
     net.start()
     net.pingAll()
