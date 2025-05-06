@@ -15,7 +15,10 @@ table ip r2 {
         iifname "r2-eth0" tcp flags & (fin|psh|urg) == (fin|psh|urg) drop 
         # OR if we limit to new connections tcp flags & (fin|psh|urg) == (fin|psh|urg) && ct state new drop
         iifname "r2-eth12" ip saddr 10.1.0.0/24 accept;
-        iifname "r2-eth0" ip daddr {10.12.0.10, 10.12.0.20, 10.12.0.30, 10.12.0.40} tcp flags syn ct state new limit rate 200/second burst 50 accept;
+        iifname "r2-eth0" tcp flags syn ct state new limit rate 200/second burst 50 accept;
+        iifname "r2-eth0" tcp flags syn ct state new drop;
+        tcp flags syn ct state new limit rate 200/second burst 50 accept;
+        ip daddr {10.12.0.10, 10.12.0.20, 10.12.0.30, 10.12.0.40} accept;
         ct state {established, related} accept;
     }
 
