@@ -1,0 +1,11 @@
+#!/usr/sbin/nft -f
+
+flush ruleset;
+
+table ip ws {
+    chain input {
+        type filter hook input priority 0; policy accept;
+
+        tcp flags & (fin|psh|urg) == (fin|psh|urg) drop
+    }
+}
