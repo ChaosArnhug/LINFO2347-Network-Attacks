@@ -67,7 +67,13 @@ def apply_nftables_rules(net, hostnames, rules_path):
         info(f">>> Loading nftables from {fullpath} into {host}\n")
         out = net[host].cmd(f"nft flush ruleset; nft -f {fullpath} 2>&1")
         info(out)
-
+        
+def enable_syncookies(net, hostnames):
+    info(f">>> Enabling SYN cookies on selected hosts\n")
+    for host in hostnames:
+        out = net[host].cmd("sysctl -w net.ipv4.tcp_syncookies=1")
+        info(f"{host}: {out}")
+        
 def run():
     topo = TopoSecu()
     net = Mininet(topo=topo)
@@ -77,6 +83,8 @@ def run():
     net.start()
     add_routes(net)
     start_services(net)
+
+    enable_syncookies(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
 
     # Apply rules
     apply_nftables_rules(net, ['r1'],   'basic_r1.nft')
@@ -97,6 +105,8 @@ def ping_all():
     add_routes(net)
     start_services(net)
 
+    enable_syncookies(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
+    
     apply_nftables_rules(net, ['r1'],   'basic_r1.nft')
     apply_nftables_rules(net, ['r2'],   'basic_r2.nft')
     apply_nftables_rules(net, ['http','dns','ftp','ntp'], 'basic_dmz.nft')
