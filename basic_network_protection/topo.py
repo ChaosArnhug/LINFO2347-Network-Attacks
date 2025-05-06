@@ -111,6 +111,7 @@ def apply_nftables_rules(net, hostnames, rules_path):
         info(out)
 
 def run():
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     topo = TopoSecu()
     net = Mininet(topo=topo)
 
@@ -134,6 +135,7 @@ def run():
 
 
 def ping_all():
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     topo = TopoSecu()
     net = Mininet(topo=topo)
 
