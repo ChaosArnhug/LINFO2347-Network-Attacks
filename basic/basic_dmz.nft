@@ -8,7 +8,7 @@ chain INPUT {
     ct state {established, related} accept;
     ip protocol icmp icmp type echo-request accept;
 
-    tcp flags syn ct state new limit rate 200/second burst 50 accept;
+    tcp flags syn ct state new limit rate 75/second burst 25 accept;
     tcp flags syn ct state new drop;
 }
 
