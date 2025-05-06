@@ -68,11 +68,12 @@ def apply_nftables_rules(net, hostnames, rules_path):
         out = net[host].cmd(f"nft flush ruleset; nft -f {fullpath} 2>&1")
         info(out)
         
-def enable_syncookies(net, hostnames):
-    info(f">>> Enabling SYN cookies on selected hosts\n")
+def enable_syn_sec(net, hostnames):
     for host in hostnames:
-        out = net[host].cmd("sysctl -w net.ipv4.tcp_syncookies=1")
-        info(f"{host}: {out}")
+        info(f">>> Applying Syn Flood security into {host}\n")
+        net[host].cmd("sysctl -w net.ipv4.tcp_syncookies=1")
+        net[host].cmd("sysctl -w net.ipv4.tcp_max_syn_backlog=1024")
+        net[host].cmd("sysctl -w net.ipv4.tcp_synack_retries=3")
         
 def run():
     topo = TopoSecu()
@@ -84,7 +85,7 @@ def run():
     add_routes(net)
     start_services(net)
 
-    enable_syncookies(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
+    enable_syn_sec(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
 
     # Apply rules
     apply_nftables_rules(net, ['r1'],   'basic_r1.nft')
@@ -105,7 +106,7 @@ def ping_all():
     add_routes(net)
     start_services(net)
 
-    enable_syncookies(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
+    enable_syn_sec(net, ['http', 'dns', 'ftp', 'ntp', 'ws2', 'ws3'])
     
     apply_nftables_rules(net, ['r1'],   'basic_r1.nft')
     apply_nftables_rules(net, ['r2'],   'basic_r2.nft')
