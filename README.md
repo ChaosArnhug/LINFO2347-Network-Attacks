@@ -87,6 +87,11 @@ To clear:
 sudo mn -c
 ```
 
+### Launching attacks
+
+The attacks are available in the *attacks* folder. Each file contains one attack with it's own CLI. The only exception is the *network_scan.py* wich contain several attacks.
+We explain bellow how to execute each attacks but we recommand to test them on the default topology to see how they work as the other one can prevent attacks to work properly.
+
 ## Basic Network Protection
 
 *The topology and the nftable configuration file can be found into the basic_network_protection folder*
