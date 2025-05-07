@@ -6,7 +6,7 @@ table ip ws {
     chain input {
         type filter hook input priority 0; policy accept;
 
-        tcp flags syn ct state new limit rate 75/second burst 25 accept;
+        tcp flags syn ct state new limit rate 75/second burst 25 packets accept;
         tcp flags syn ct state new drop;
     }
 }

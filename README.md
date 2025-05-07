@@ -326,10 +326,38 @@ mininet> ws3 sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
 mininet> r1 sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
 ```
 
-## SYN Flooding
+## SYN Flooding (DoS)
 
 ### Attack
 
+SYN Flood works by flooding a target by starting TCP connections without closing them.
+
+A common scenario is to target a known port on a host to prevent new tcp connections from opening (e.g. targeting `http` server on port 80). Worskations can attack/be attacked as well since it's a TCP connection limit rather than port usage limit.
+
+In our attack we generate spoofed Ipv4 Addresses
+
+```
+mininet> ws2 sudo -E python3 ~/Desktop/LINFO2347/attacks/syn_flood.py
+Enter the target IP address: 10.0.1.3
+Enter the target port: 80
+Enter the number of requests to send: 150
+[*] Launching SYN flood on 10.0.1.3:80 with 150 packets...
+[*] SYN flood complete.
+```
+
 ### Defense
 
-To defend see the `nftable` rule file in `/basic/syn_flood.nft`. They can be activated in the topology directly in `/basic/topo_basic.py`
+To defend we can load the defense topology loated at `/protections/syn_flood/flood_topo.py`
+
+```
+sudo -E python3 ~/Desktop/LINFO2347/protections/syn_flood/flood_topo.py
+```
+
+The defense is mainly based on rate limiting on hosts with nftables:
+
+```
+tcp flags syn ct state new limit rate 75/second burst 25 accept;
+tcp flags syn ct state new drop;
+```
+
+Here we limit the rate at which tcp connections are opened.

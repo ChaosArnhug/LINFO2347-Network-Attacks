@@ -8,7 +8,7 @@ table ip dmz {
         iifname "lo" accept;
         ct state { established, related } accept;
         ip protocol icmp icmp type echo-request accept;
-        tcp dport 80 flags syn ct state new limit rate 75/second burst 25 accept;
+        tcp dport 80 tcp flags syn ct state new limit rate 75/second burst 25 accept;
         tcp flags syn ct state new drop;
     }
 
