@@ -9,6 +9,7 @@ Group 7: `MEUNIER Arnaud` & `HENNEN Cyril`
   - [Installing required material (from Debian 12)](#installing-required-material-from-debian-12)
   - [Starting Mininet](#starting-mininet)
   - [Clearing Mininet](#clearing-mininet)
+- [Basic Network Protection](#basic-network-protection)
 - [Network scans (Xmas scan)](#network-scans-xmas-scan)
   - [Attack](#attack-1)
   - [Defense](#defense-1)
@@ -49,10 +50,33 @@ sudo systemctl status dnsmasq.service
 
 ### Starting mininet
 
-Then to start `mininet`
+We have several topology available and can be launched as followed : 
 
+1. Default topology (given by the teacher)
 ```
-sudo -E python3 ~/Desktop/LINFO2347/basic/topo_basic.py 
+sudo python3 ./default_topo.py
+```
+2. Basic Network Protection
+```
+sudo python3 ./basic_network_protection/topo.py
+```
+3. Defense for Reflected DDOS
+```
+sudo python3 ./protections/reflected_ddos/reflected_topo.py
+```
+4. Defense for Syn Flood
+```
+sudo python3 ./protections/syn_flood/flood_topo.py
+```
+5. Defense for Xmas Scan
+```
+sudo python3 ./protections/xmas_scan/xmas_topo.py
+```
+6. Defense for ARP Poisoning
+```
+```
+7. Defense for X
+```
 ```
 
 ### Clearing mininet
@@ -63,6 +87,31 @@ To clear:
 sudo mn -c
 ```
 
+## Basic Network Protection
+
+*The topology and the nftable configuration file can be found into the basic_network_protection folder*
+
+The protection are written so that they have the best security possible while following this requirements :
+- Workstations can send a ping and initiate a connection towards any other host (other workstations, DMZ servers, internet).
+- DMZ servers cannot send any ping or initiate any connection. They can only respond to incoming connections.
+- The Internet can send a ping or initiate a connection only towards DMZ servers. They cannot send a ping or initiate connections towards workstations.
+
+#### Router R1
+R1 is configured so that only trafic comming from the workstation and the answers to this trafic can go trought the router. This means that anything that was not initiated by the workstation is dropped, isolating the workstation network from the rest.
+
+#### Router R2
+R2 is configured so that :
+- Trafic comming from the workstation can go trought
+- Incomming trafic is only allowed if the destination is a DMZ server on their correct port or if the trafic is related to an already existing connection
+- Internet can only ping the dmz server
+- Any other trafic is dropped
+
+#### DMZ servers (http, ntp, dns, ftp)
+- DMZ servers only accept incomming trafic that follows the right port and protocol (tcp port 80 for http, udp port 5353 for dns, tcp port 20,21 for ftp, udp port 123 for ntp) or if the connection is already established or if the traffic is a ping request.
+- The servers can only response to ping request or any established connection
+- The DMZ cannot forward any traffic
+
+Those configuration ensure that we reduce the attack surface as much as we can while meeting the requirement
 ## Network scans (Xmas scan)
 
 ### Attack
