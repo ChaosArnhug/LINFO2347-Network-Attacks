@@ -212,6 +212,8 @@ sudo python3 ./protections/reflected_ddos/reflected_topo.py
 
 ### 3. ARP Poisoning (MITM)
 
+**TO UPDATE**
+
 #### Attack
 ARP poisoning allows an attacker to intercept traffic between two devices by sending forged ARP packets.
 
@@ -253,22 +255,61 @@ A SYN flood attack overwhelms a target by sending numerous TCP connection reques
 
 **Steps to Launch**:
 1. Start the default topology:
-   ```bash
-   sudo python3 ./default_topo.py
-   ```
+```bash
+sudo python3 ./default_topo.py
+```
 2. From `ws2`, launch the SYN flood attack:
-   ```bash
-   ws2> sudo -E python3 ~/Desktop/LINFO2347/attacks/syn_flood.py
-   ```
-   Provide the target IP, port, and number of requests.
+```bash
+ws2> sudo -E python3 ~/Desktop/LINFO2347/attacks/syn_flood.py
+```
+Provide the target IP, port, and number of requests.
+
+*Note: The attack can be launched from any host, but the `ws2` host is used for demonstration purposes.*
+
+**Example Output**:
+![syn flood](./screenshots/syn_flood.png)
+
 
 #### Defense
-To defend against SYN flooding, use rate limiting on TCP connection requests:
+
+Only using nftables to defend against SYN flooding is not enough. The best way to defend against SYN flooding is to use a combination of `nftables` and other tcp stack protections. This means that the attacks will not be stopped but the impact will be reduced.
+
+1. Rate limiter on your hosts for incoming SYN packets:
 ```nft
 tcp flags syn ct state new limit rate 75/second burst 25 packets accept;
 tcp flags syn ct state new drop;
 ```
-**Steps to Apply**:
+2. Enable SYN cookies on your hosts:
 ```bash
-sudo nft -f protections/syn_flood/flood_http.nft
+sysctl -w net.ipv4.tcp_syncookies=1
 ```
+3. Increase the maximum number of pending connections:
+```bash
+sysctl -w net.ipv4.tcp_max_syn_backlog=1024
+```
+4. Reduce the number of SYN-ACK retries:
+```bash
+sysctl -w net.ipv4.tcp_synack_retries=3
+```
+*Note: The rate limiter value can be adjusted based on the network's capacity and expected traffic. As we do not have a real network, the value may be too high or too low.*
+
+**Launch the defense**:
+```bash
+sudo python3 ./protections/syn_flood/flood_topo.py
+```
+*Note: this will launch a new topology including the basic_network_protection and the added defenses.*
+
+**Example Output**:
+![syn flood](./screenshots/syn_flood_protection.png)
+
+**Defense summary**:
+| Attacker-Victim | How |
+|------|-----|
+| ws -> ws | ws rate limit drop the packets if too much SYN + tcp stacks protection |
+| ws -> dmz | dmz rate limit drop the packets if too much SYN + tcp stacks protection |
+| ws -> internet | Works but doesn't affect our network directly |
+| dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection |
+| dmz -> dmz | dmz (attacker) cannot initiate connections + dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection|
+| dmz -> internet | dmz cannot initiate connections |
+| internet -> ws | r2 will drop the packets because invalid destination ip |
+| internet -> dmz | dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection |
