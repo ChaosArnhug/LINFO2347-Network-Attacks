@@ -1,363 +1,345 @@
-# LINFO2347: Network Attacks
+# LINFO2347: Network Attacks Project
 
-Group 7: `MEUNIER Arnaud` & `HENNEN Cyril`
+This document provides an overview of the project structure, setup instructions, details about the implemented attacks, how to launch them, and the corresponding defenses using custom topologies. Additionally, it explains the functionality of the basic network protection.
 
-## Table of Contents
+---
 
-- [LINFO2347: Network Attacks](#linfo2347-network-attacks)
-- [Setup](#setup)
-  - [Installing required material (from Debian 12)](#installing-required-material-from-debian-12)
-  - [Starting Mininet](#starting-mininet)
-  - [Clearing Mininet](#clearing-mininet)
-- [Basic Network Protection](#basic-network-protection)
-- [Network scans (Xmas scan)](#network-scans-xmas-scan)
-  - [Attack](#attack-1)
-  - [Defense](#defense-1)
-- [DNS Reflection (DoS)](#dns-reflection-dos)
-  - [Attack](#attack-2)
-  - [Defense](#defense-2)
-- [ARP Poisoning (MITM)](#arp-poisoning-mitm)
-  - [Attack](#attack-3)
-  - [Defense](#defense-3)
-- [SYN Flooding](#syn-flooding)
-  - [Attack](#attack-4)
-  - [Defense](#defense-4)
+## Project Structure
 
-## Setup
+The project is organized into the following folders and files:
 
-### Installing required material (from Debian 12)
+```
+LINFO2347/
+├── attacks/
+│   ├── arp_poison.py          # ARP poisoning attack script
+│   ├── network_scans.py       # Various network scanning attacks
+│   ├── reflected_ddos.py      # DNS reflection attack script
+│   ├── syn_flood.py           # SYN flooding attack script
+├── basic_network_protection/
+│   ├── topo.py                # Mininet topology for basic network protection
+│   ├── basic_r1.nft           # Firewall rules for Router R1
+│   ├── basic_r2.nft           # Firewall rules for Router R2
+│   ├── basic_http.nft         # Firewall rules for HTTP server
+│   ├── basic_dns.nft          # Firewall rules for DNS server
+│   ├── basic_ntp.nft          # Firewall rules for NTP server
+│   ├── basic_ftp.nft          # Firewall rules for FTP server
+├── protections/
+│   ├── xmas_scan/             # Xmas scan defense topology and rules
+│   ├── syn_flood/             # SYN flood defense topology and rules
+│   ├── reflected_ddos/        # DNS reflection defense topology and rules
+├── README.md                  # Main documentation
+├── statement.md               # Project statement
+├── default_topo.py            # Default Mininet topology
+```
+
+---
+
+## Setup Instructions
+
+This project is designed to run on the VM provided in the course (V2) but we included instructions to run it on a fresh Debian 12 installation. The project uses Mininet for network simulation and `nftables` for firewall rules.
+
+### Installing Required Tools (Debian 12)
+
+Run the following commands to install the necessary tools if you are using a fresh Debian 12 installation:
 
 ```bash
 sudo apt install tcpdump -y
 sudo apt install openssh-server -y
 sudo systemctl enable ssh
 sudo systemctl start ssh
-sudo systemctl status ssh
-
-sudo nano /etc/ssh/sshd_config # with appropriate settings like password/less login
-sudo systemctl restart ssh
-
 sudo apt install curl mininet python3-pip python3-setuptools apache2 dnsmasq openntpd vsftpd -y
 sudo sed -i 's/^#port=/port=5353/' /etc/dnsmasq.conf
 sudo sed -i 's/^port=.*/port=5353/' /etc/dnsmasq.conf
 sudo systemctl restart dnsmasq
-
-#(to check everything is ok)
-sudo systemctl status dnsmasq.service
-
-# Note dnsmasq is using port 5353 AND UNCOMENT the 'no-resolv' line #no-resolv (around line 70) in /etc/dnsmasq.conf
 ```
 
-### Starting mininet
+### Lauching the Topology
 
-We have several topology available and can be launched as followed : 
+The project includes several topologies. Launching them include the application of the defenses mechanisms to the network and worstations.
+All of them are based on the default topology given in the course with the default one being unmodified. 
 
-1. Default topology (given by the teacher)
-```
+1. **Default Topology**:
+    Recommanded if you want to test the attacks in a defensless environment.
+```bash
 sudo python3 ./default_topo.py
 ```
-2. Basic Network Protection
-```
+2. **Basic Network Protection**:
+```bash
 sudo python3 ./basic_network_protection/topo.py
 ```
-3. Defense for Reflected DDOS
-```
-sudo python3 ./protections/reflected_ddos/reflected_topo.py
-```
-4. Defense for Syn Flood
-```
-sudo python3 ./protections/syn_flood/flood_topo.py
-```
-5. Defense for Xmas Scan
-```
+3. **Defense for Xmas Scan**:
+```bash
 sudo python3 ./protections/xmas_scan/xmas_topo.py
 ```
-6. Defense for ARP Poisoning
+4. **Defense for Reflected DDoS**:
+```bash
+sudo python3 ./protections/reflected_ddos/reflected_topo.py
 ```
-```
-7. Defense for X
-```
-```
-
-### Clearing mininet
-
-To clear:
-
-```
-sudo mn -c
+5. **Defense for SYN Flood**:
+```bash
+sudo python3 ./protections/syn_flood/flood_topo.py
 ```
 
-### Launching attacks
+`NB`: It's recommended to pass the **-E** arg to sudo to preserve the environment variables (sicne we are dealing with mininet/python)`
 
-The attacks are available in the *attacks* folder. Each file contains one attack with it's own CLI. The only exception is the *network_scan.py* wich contain several attacks.
-We explain bellow how to execute each attacks but we recommand to test them on the default topology to see how they work as the other one can prevent attacks to work properly.
+---
 
 ## Basic Network Protection
 
-*The topology and the nftable configuration file can be found into the basic_network_protection folder*
+The basic network protection ensures the topology mimics a secure enterprise network by implementing firewall rules using `nftables`. These rules enforce the following policies:
 
-The protection are written so that they have the best security possible while following this requirements :
-- Workstations can send a ping and initiate a connection towards any other host (other workstations, DMZ servers, internet).
-- DMZ servers cannot send any ping or initiate any connection. They can only respond to incoming connections.
-- The Internet can send a ping or initiate a connection only towards DMZ servers. They cannot send a ping or initiate connections towards workstations.
+1. **Workstations (LAN)**:
+   - Can send pings and initiate connections to any other host (workstations, DMZ servers, or the Internet).
+   - Responses to their requests are allowed.
+   - Cannot receive unsolicited pings or connections comming outside their LAN.
 
-#### Router R1
-R1 is configured so that :
-- Trafic comming from the workstation and the answers to this trafic can go trought the router
-- It drops anything not related to trafic generated by the workstations
+2. **DMZ Servers**:
+   - Cannot initiate any connections or send pings.
+   - Can only respond to incoming/established connections on specific ports (e.g., HTTP on port 80, DNS on port 5353, etc.) and ping requests.
+   - Cannot forward traffic.
 
-#### Router R2
-R2 is configured so that :
-- Trafic comming from the workstation can go trought
-- Incomming trafic is only allowed if the destination is a DMZ server on their correct port or if the trafic is related to an already existing connection
-- Internet can only ping the dmz server
-- Any other trafic is dropped
+3. **Internet**:
+   - Can only send pings or initiate connections to DMZ servers.
+   - Cannot send pings or initiate connections to workstations.
 
-#### DMZ servers (http, ntp, dns, ftp)
-- DMZ servers only accept incomming trafic that follows the right port and protocol (tcp port 80 for http, udp port 5353 for dns, tcp port 20,21 for ftp, udp port 123 for ntp), if the connection is already established or if the traffic is a ping request.
-- The servers can only response to ping request or any established connection and cannot output anything else
-- The DMZ cannot forward any traffic
+These rules reduce the attack surface while maintaining normal network functionality.
 
-Those configuration ensure that we reduce the attack surface as much as we can while meeting the requirement
-## Network scans (Xmas scan)
+### Launching the Basic Network Protection
 
-### Attack
-
-The Xmas scan works by sending a TCP packet with the **FIN**, **PSH** and **URG** flags set. And according to the RFC:
-- If a port is closed, the host should **reply** with a **RST** (reset)
-- If a port is open, there should be no response (same for filtered)
-
-Purpose? Identifying hosts that are alive + indication that the network is not well protected/vulnerable.
-In the example here port 443 is closed so the attacker knows it's probably running a HTTP server as well.
-
-To launch an attack, with the mininet up and running:
-
+Start the basic network protection topology and defense with the following command:
+```bash
+sudo python3 ./basic_network_protection/topo.py
 ```
+
+---
+
+## Attacks and Defenses
+
+### 1. Network Scans (Xmas Scan)
+
+#### Attack
+The Xmas scan sends TCP packets with the **FIN**, **PSH**, and **URG** flags set. Open ports do not respond, while closed ports reply with a **RST**.
+
+**Steps to Launch**:
+1. Start the default topology:
+```bash
+sudo python3 ./default_topo.py
+```
+2. From the `internet` host, run the Xmas scan:
+```bash
 mininet> internet sudo -E python3 ~/Desktop/LINFO2347/attacks/network_scans.py
-
-Select attack:
- 1. ICMP Ping Sweep
- 2. ARP Ping Sweep
- 3. TCP SYN Port Scan
- 4. Xmas Tree Scan
- 5. UDP Scan
- 6. Exit
-Choice: 4
-Target IP [10.12.0.10]: 10.12.0.10
-Ports [22,80,443]: 22,80,443
-
-[*] Xmas Tree Scan on 10.12.0.10 ports 22,80,443
-  → TCP port 22 OPEN|FILTERED (no answer)         
-  → TCP port 80 OPEN|FILTERED (no answer)         
-  → TCP port 443 CLOSED                           
-[Xmas Tree Scan] Terminated.
 ```
+   Select option `4` (Xmas Tree Scan) and provide the target IP and ports.
 
-So the internet did a Xmas scan on our HTTP server and found out that it's alive and it's likely a HTTP server.
+*Note: The attack can be launched from any host, but the `internet` host is used for demonstration purposes.*
+
+**Example Output**:
 
 ![xmas not protected](./screenshots/xmas_not_protected.png)
 
-### Defense
-
-To defend this attack from hitting our DMZ, we need to add a rule on `r2` (DMZ <-> Internet)
-
+#### Defense
+To improve the defenses against Xmas scans, add a rule on your hosts to drop packets with the **FIN**, **PSH**, and **URG** flags set:
+```nft
+tcp flags & (fin|psh|urg) == (fin|psh|urg) drop
 ```
-iifname "r2-eth0" tcp flags & (fin|psh|urg) == (fin|psh|urg) drop
+**Launch the defense**:
+```bash
+sudo python3 ./protections/xmas_scan/xmas_topo.py
 ```
+*Note: this will launch a new topology including the basic_network_protection and the added defenses.*
 
-What it catches: TCP packets with the **FIN**, **PSH** and **URG** flags set.
-What it does: it drops them!
+**Defense summary**:
+| Attacker-Victim | How |
+|------|-----|
+| ws -> ws | ws and r1 nftable will drop the packets with the added rule |
+| ws -> dmz | dmz, r1 and r2 will drop the packets with the added rule |
+| ws -> internet | r1 and r2 will drop the packets with the added rule |
+| dmz -> ws | dmz (attacker) cannot initiate connections + r1 and r2 will drop the packets with the added rule |
+| dmz -> dmz | dmz (attacker) cannot initiate connections + dmz (victim), r1 and r2 will drop the packets with the added rule |
+| dmz -> internet | dmz cannot initiate connections + r1 and r2 will drop the packets with the added rule |
+| internet -> ws | r2 will drop the packets because invalid destination ip|
+| internet -> dmz | dmz, r2 will drop the packets with the added rule |
 
-![xmas protected](./screenshots/xmas_protected.png)
+---
 
-## DNS Reflection (DoS)
+### 2. DNS Reflection (DoS)
 
-### Attack
+#### Attack
+A DNS reflection attack uses a DNS server to amplify traffic towards a victim by sending spoofed DNS queries.
 
-After mininet is up and running:
-
+**Steps to Launch**:
+1. Start the default topology:
+```bash
+sudo python3 ./default_topo.py
 ```
-mininet> xterm internet ws2 r2 dns
+2. From the `internet` host, run the DNS reflection attack:
+```bash
+mininet> internet sudo -E python3 ~/Desktop/LINFO2347/attacks/reflected_ddos.py
 ```
-`NOTE`: this attacks involves the victim (a workstation), the entrance router (r2), the dns server within the DMZ and the internet (the attacker)
+*Note: The attack can be launched from any host, but the `internet` host is used for demonstration purposes.*
 
-From `ws2` (the victim) we want to capture the traffic and inspect the DoS occuring through the DNS:
-
-```
-root@vbox:~/Desktop/LINFO2347# tcpdump -i ws2-eth0 -n udp port 5353 -w /tmp/ws2-dns-reflect-capture.pcap
-```
-
-Now from `internet` we want to then launch the attack:
-
-```
-root@vbox:~/Desktop/LINFO2347# python3 ~/Desktop/LINFO2347/attacks/reflected_ddos.py
-```
-
-This is a screenshot of the attack with **zero protection enabled**:
+**Example Output**:
 
 ![dns ddos](./screenshots/dns_ddos_no_protection.png)
-`NOTE`: We can see the workstation being targetted by our own DNS server, with the UDP packets coming through both r2 and r1.
+*Note: We can see the workstation being targetted by our own DNS server, with the UDP packets coming through both r2 and r1.*
 
-*Optionally* to check the DNS IN/OUT traffic to confirm/debug:
-
-```
-mininet> xterm dns
-```
-
-For incoming: 
-
-```
-tcpdump -i dns-eth0 -n 'udp and src host 10.1.0.2 and dst port 5353'
-```
-
-For outgoing:
-
-```
-tcpdump -i dns-eth0 -n 'udp and dst host 10.1.0.2 and src port 5353'
-```
-
-### Defense
-
-For the defense, they are both located on the two routers in `/basic/basic_r2.nft` and `/basic/basic_r1.nft`.
-
-On `r2` (also known as the main entrance):
-
-```
+#### Defense
+To improve the defenses against DNS reflection attacks, add rules on `R2`to drop packets from the Internet claiming to originate from internal IP ranges:
+```nft
 iifname "r2-eth0" ip saddr 10.1.0.0/24 drop;
 iifname "r2-eth0" ip saddr 10.12.0.0/24 drop;
 ```
 
-What it catches: Any inbound packet on the internet interface (r2-eth0) that claims to come from your internal LAN (10.1.0.0/24) or DMZ (10.12.0.0/24).
+**Launch the defense**:
+```bash
+sudo python3 ./protections/reflected_ddos/reflected_topo.py
+```
+*Note: this will launch a new topology including the basic_network_protection and the added defenses.*
 
-This is a screenshot of the attack with **full protection enabled**:
-
+**Example Output**:
 ![dns ddos](./screenshots/dns_ddos_full_protection.png)
 
-But `r1` also protects our `ws` from unsolicited DNS replies.
+**Defense summary**:
+| Attacker-Victim | How |
+|------|-----|
+| ws -> ws | r1 will drop the dns response as it is not an established connection |
+| ws -> dmz | dmz will drop the dns response as it doesn't respect the destination port rule (ie: response will not be on port 80 for http server)|
+| ws -> internet | Works but doesn't affect our network directly |
+| dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection  |
+| dmz -> dmz | dmz (attacker) cannot initiate connections + dmz will drop the dns response as it doesn't respect the destination port rule (ie: response will not be on port 80 for http server) |
+| dmz -> internet | dmz cannot initiate connections |
+| internet -> ws | r2 will drop the packets with the added rule |
+| internet -> dmz | r2 will drop the packets with the added rule |
 
-An attacker on the Internet forges a query with src=10.1.0.2 (ws2). That forged query never hit r1 in the first place (it goes straight to r2 -> DMZ).
+---
 
-The DNS server’s reply comes back to r1 with src=10.12.0.20 and dst=10.1.0.2.
+### 3. ARP Poisoning (MITM)
 
-It doesn't blcok legitimate requests from `ws2`.
-ws2 (10.1.0.2) sends a DNS query -> r1.
-On r1, ip saddr 10.1.0.0/24 accept matches immediately, so the query is forwarded onward into the DMZ
+#### Attack
 
-This is a screenshot of the attack with **only r1 protection enabled**:
+ARP poisoning allows an attacker to intercept traffic between two devices by sending forged ARP packets.
 
-![dns ddos](./screenshots/dns_ddos_onlyr1.png)
+**Steps to Launch**:
+1. Start the default topology:
+   ```bash
+   sudo python3 ./default_topo.py
+   ```
+2. Open terminals for `ws2` (attacker) and `ws3` (victim):
+   ```bash
+   mininet> xterm ws2 ws3
+   ```
+3. On `ws2`, launch the ARP poisoning attack:
+   ```bash
+   ws2> sudo -E python3 ~/Desktop/LINFO2347/attacks/arp_poison.py
+   ```
+4. On `ws3`, try accessing a service (e.g., HTTP server):
+   ```bash
+   ws3> curl http://10.12.0.10
+   ```
+5. You can also use the `arp -n` command directly which lists the IP/MAC mapping (in the case of `ws3` initially, it should only have the router with the proper MAC address, not a spoofed one)
+   ```bash
+   mininet> ws3 arp -n
+   Address                  HWtype  HWaddress           Flags Mask            Iface
+   10.1.0.1                 ether   d2:e2:fe:98:25:e5   CM                    ws3-eth0
+   ```
 
-## ARP Poisoning (MITM)
+Screenshot of the attack:
 
-### Attack
+![arp poison attack](./screenshots/arp_poison_atck_final.png)
 
-For this attack we need `ws2` and `ws3`. 
+So on the screenshot:
+- Before the attack, ARP tables are empty
+- After the attack, the ARP tables (MAC entries) of both `r1` and `ws3` (the victim) point to the attacker `ws2`
+- All the traffic on `ws3-eth0` **goes through ws2** (MITM)
 
-We first start by opening 3 `xterm` terminals from the Mininet:
+#### Defense
 
-```
-mininet> xterm ws2 ws2 ws3
-```
+Defending against ARP poisoning requires static ARP entries:
 
-On one `ws2` terminal we listen (MITM):
-```
-ws2> sudo tcpdump -i ws2-eth0 -n -X 'host 10.1.0.3 and not arp'
-```
+1. On `r1`, set a static ARP entry for `ws3`:
+   ```bash
+   sudo arp -s 10.1.0.3 <ws3-mac-address> -i r1-eth0
+   ```
+2. On `ws3`, set a static ARP entry for `r1`:
+   ```bash
+   sudo arp -s 10.1.0.1 <r1-mac-address> -i ws3-eth0
+   ```
 
-On the other `ws2` terminal we launch the attack
-```
-ws2> sudo -E python3 ~/Desktop/LINFO2347/attacks/arp_poison.py
-```
+But here we did it directly in the topology:
 
-Then on the victim we simply try to reach one of the service in the DMZ for instance the `http` server (`apache2`):
-```
-ws3> curl http://10.12.0.10
-```
-
-Before the attack:
-
-![arp attack before](./screenshots/arp-attack-before.png)
-
-After the attack:
-
-![arp attack after](./screenshots/arp-attack-after.png)
-
-
-### Defense
-
-After spending quite a few hours on the question, we couldn't come up with `nftables` rules defending against our own script. We could theoretically dumb down the attack/arp poisoning (by not targeting the router as well) but dual-sided poisoning is needed for a full MITM.
-
-- Dynamic discovery + forged-but-accurate packets = can’t be told apart by simple IP/MAC rules.
-- High-frequency flooding, rate limiting can't counter the attack
-- Dual-sided poisoning means full MITM, not just cache pollution.
-
-So the practical idea to defend against such nasty arp poisoning is to:
-
-1. Either use static (hardcoded) arp entries (not that great but surely effective way to deal with arp poison).
-
-2. `nftables` are not the best way to counter arp cache poison, inherently it's the same hardcoding of mac addresses but inherently how to know who is what if the packets are forged and sent out (with scapy we are at the lowest level possible forging layer 2 packets). Since the attacker can send packets with the MAC address of the router `nftables` are too weak and can be bypassed by the attack script we wrote (basically we couldn't figure out a way to counter our own attack with `ntfables` and the solution can't be simple when you take into account L2 source spoofing).
-
-3. **Use ipv6 but this seems to be outside the scope of the project, but no one should still be using ipv4 arp**
-
-Here's our very simplistic `static arp` using `arp` directly:
-
-```
-mininet> r1 sudo ~/Desktop/LINFO2347/basic/set_static_arp.sh
-Running on Router (r1) (10.1.0.1). Setting static ARP for 10.1.0.3.
-Executing: sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
-Verifying ARP entry:
-10.1.0.3                 ether   e2:b2:14:9d:90:5c   CM                    r1-eth0
-Static ARP entry set successfully.
-
-
-mininet> ws3 sudo ~/Desktop/LINFO2347/basic/set_static_arp.sh
-Running on Workstation (ws3) (10.1.0.3). Setting static ARP for 10.1.0.1.
-Executing: sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
-Verifying ARP entry:
-10.1.0.1                 ether   ca:31:e1:f5:1d:01   CM                    ws3-eth0
-Static ARP entry set successfully.
+```bash
+sudo -E python3 ~/Desktop/LINFO2347/protections/arp_poison/arp_poison_topo.py
 ```
 
-With this "defense" script we cancel out arp poisoning completely on ws3 for instance. What the whole script does is basically run these commands:
+![arp poison attack def](./screenshots/arp_poison_def_final.png)
 
+Now, with the defense, the ARP table initial state is not empty, it contains the static entries from the Mininet topology.
+And these entries do not change even after the attack is launched.
+
+---
+
+### 4. SYN Flooding (DoS)
+
+#### Attack
+A SYN flood attack overwhelms a target by sending numerous TCP connection requests without completing the handshake.
+
+**Steps to Launch**:
+1. Start the default topology:
+```bash
+sudo python3 ./default_topo.py
 ```
-mininet> ws3 sudo arp -s 10.1.0.1 ca:31:e1:f5:1d:01 -i ws3-eth0
-
-mininet> r1 sudo arp -s 10.1.0.3 e2:b2:14:9d:90:5c -i r1-eth0
+2. From `ws2`, launch the SYN flood attack:
+```bash
+ws2> sudo -E python3 ~/Desktop/LINFO2347/attacks/syn_flood.py
 ```
+Provide the target IP, port, and number of requests.
 
-## SYN Flooding (DoS)
+*Note: The attack can be launched from any host, but the `ws2` host is used for demonstration purposes.*
 
-### Attack
+**Example Output**:
+![syn flood](./screenshots/syn_flood.png)
 
-SYN Flood works by flooding a target by starting TCP connections without closing them.
 
-A common scenario is to target a known port on a host to prevent new tcp connections from opening (e.g. targeting `http` server on port 80). Worskations can attack/be attacked as well since it's a TCP connection limit rather than port usage limit.
+#### Defense
 
-In our attack we generate spoofed Ipv4 Addresses
+Only using nftables to defend against SYN flooding is not enough. The best way to defend against SYN flooding is to use a combination of `nftables` and other tcp stack protections. This means that the attacks will not be stopped but the impact will be reduced.
 
-```
-mininet> ws2 sudo -E python3 ~/Desktop/LINFO2347/attacks/syn_flood.py
-Enter the target IP address: 10.0.1.3
-Enter the target port: 80
-Enter the number of requests to send: 150
-[*] Launching SYN flood on 10.0.1.3:80 with 150 packets...
-[*] SYN flood complete.
-```
-
-### Defense
-
-To defend we can load the defense topology loated at `/protections/syn_flood/flood_topo.py`
-
-```
-sudo -E python3 ~/Desktop/LINFO2347/protections/syn_flood/flood_topo.py
-```
-
-The defense is mainly based on rate limiting on hosts with nftables:
-
-```
-tcp flags syn ct state new limit rate 75/second burst 25 accept;
+1. Rate limiter on your hosts for incoming SYN packets:
+```nft
+tcp flags syn ct state new limit rate 75/second burst 25 packets accept;
 tcp flags syn ct state new drop;
 ```
+2. Enable SYN cookies on your hosts:
+```bash
+sysctl -w net.ipv4.tcp_syncookies=1
+```
+3. Increase the maximum number of pending connections:
+```bash
+sysctl -w net.ipv4.tcp_max_syn_backlog=1024
+```
+4. Reduce the number of SYN-ACK retries:
+```bash
+sysctl -w net.ipv4.tcp_synack_retries=3
+```
+*Note: The rate limiter value can be adjusted based on the network's capacity and expected traffic. As we do not have a real network, the value may be too high or too low.*
 
-Here we limit the rate at which tcp connections are opened.
+**Launch the defense**:
+```bash
+sudo python3 ./protections/syn_flood/flood_topo.py
+```
+*Note: this will launch a new topology including the basic_network_protection and the added defenses.*
+
+**Example Output**:
+![syn flood](./screenshots/syn_flood_protection.png)
+
+**Defense summary**:
+| Attacker-Victim | How |
+|------|-----|
+| ws -> ws | ws rate limit drop the packets if too much SYN + tcp stacks protection |
+| ws -> dmz | dmz rate limit drop the packets if too much SYN + tcp stacks protection |
+| ws -> internet | Works but doesn't affect our network directly |
+| dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection |
+| dmz -> dmz | dmz (attacker) cannot initiate connections + dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection|
+| dmz -> internet | dmz cannot initiate connections |
+| internet -> ws | r2 will drop the packets because invalid destination ip |
+| internet -> dmz | dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection |
