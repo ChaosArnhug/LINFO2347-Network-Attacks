@@ -84,7 +84,7 @@ sudo python3 ./protections/arp_poison/arp_poison_topo.py
 sudo python3 ./protections/syn_flood/flood_topo.py
 ```
 
-`NB`: It's recommended to pass the **-E** arg to sudo to preserve the environment variables (sicne we are dealing with mininet/python)`
+`NB`: It's recommended to pass the **-E** arg to sudo to preserve the environment variables (since we are dealing with mininet/python)`
 
 ---
 
