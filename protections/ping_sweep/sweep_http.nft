@@ -6,6 +6,7 @@ table ip dmz {
     chain input {
         type filter hook input priority 0; policy drop;
         iifname "lo" accept;
+        ip saddr 10.12.0.0/24 drop;
         tcp dport 80 accept;
         ct state { established, related } accept;
         ip protocol icmp icmp type echo-request accept;
