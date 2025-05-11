@@ -252,10 +252,14 @@ Screenshot of the attack:
 
 ![arp poison attack](./screenshots/arp_poison_atck_final.png)
 
-So on the screenshot:
-- Before the attack, ARP tables are empty
-- After the attack, the ARP tables (MAC entries) of both `r1` and `ws3` (the victim) point to the attacker `ws2`
-- All the traffic on `ws3-eth0` **goes through ws2** (MITM)
+A lot is going on on the screenshot but basically:
+- We first `curl http://10.12.0.10` to test out
+- Then we display ARP entries on `r1` and `ws3`. We can see that the arp tables contain the right MAC addresses.
+- Now we start the attack from `ws2` and we can see that the `arp` tables of `r1` and the victim `ws3` is spoofed with `ws2`'s MAC address
+- Traffic from `ws3` to, for instance a DMZ server (http) will pass through `ws2` as shown here with tcpdump:
+
+![arp poison attack](./screenshots/arp_poison_atck_final2.png)
+
 
 #### Defense
 

@@ -116,6 +116,12 @@ def run():
     net = Mininet(topo=topo)
 
     add_routes(net)
+
+    info(net['http'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev http-eth0"))
+    info(net['dns'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev dns-eth0")) 
+    info(net['ntp'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev ntp-eth0"))
+    info(net['ftp'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev ftp-eth0"))
+
     stop_services(net)
     time.sleep(1)
     start_services(net)

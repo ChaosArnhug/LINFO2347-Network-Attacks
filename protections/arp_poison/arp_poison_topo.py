@@ -49,6 +49,8 @@ class TopoSecu(Topo):
         ntpServer = self.addHost(name='ntp', ip='10.12.0.30/24', defaultRoute='via 10.12.0.2')
         ftpServer = self.addHost(name='ftp', ip='10.12.0.40/24', defaultRoute='via 10.12.0.2')
 
+
+
         # Add host-switch links
         self.addLink(ws2, s1)
         self.addLink(ws3, s1)
@@ -160,9 +162,10 @@ def apply_static_arp(net):
         
         if target_mac and src_host in net:
             result = net[src_host].cmd(f"arp -s {target_ip} {target_mac}")
-            info(f"  {src_host} → {target_ip} ({target_host}): {'OK' if not result else result}\n")
+            info(f"  {src_host} → {target_ip} ({target_host}): {'ok' if not result else result}\n")
         else:
-            info(f"  {src_host} → {target_ip} ({target_host}): FAILED (MAC not found)\n")
+            info(f"  {src_host} → {target_ip} ({target_host}): failed mac not found\n")
+
 def run():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     topo = TopoSecu()
@@ -171,11 +174,25 @@ def run():
     net.start()
 
     add_routes(net)
+
+    info(net['http'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev http-eth0"))
+    info(net['dns'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev dns-eth0")) 
+    info(net['ntp'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev ntp-eth0"))
+    info(net['ftp'].cmd("ip route add 10.1.0.0/24 via 10.12.0.1 dev ftp-eth0"))
+    
     stop_services(net)
     time.sleep(1)
     start_services(net)
 
+    apply_nftables_rules(net, ['r1'], 'basic_r1.nft')
+    apply_nftables_rules(net, ['r2'], 'basic_r2.nft')
+    apply_nftables_rules(net, ['http'], 'basic_http.nft')
+    apply_nftables_rules(net, ['dns'], 'basic_dns.nft')
+    apply_nftables_rules(net, ['ftp'], 'basic_ftp.nft')
+    apply_nftables_rules(net, ['ntp'], 'basic_ntp.nft')
+
     apply_static_arp(net)
+
 
     CLI(net)
     stop_services(net)
@@ -192,6 +209,13 @@ def ping_all():
     add_routes(net)
     stop_services(net)
     start_services(net)
+
+    apply_nftables_rules(net, ['r1'], 'basic_r1.nft')
+    apply_nftables_rules(net, ['r2'], 'basic_r2.nft')
+    apply_nftables_rules(net, ['http'], 'basic_http.nft')
+    apply_nftables_rules(net, ['dns'], 'basic_dns.nft')
+    apply_nftables_rules(net, ['ftp'], 'basic_ftp.nft')
+    apply_nftables_rules(net, ['ntp'], 'basic_ntp.nft')
 
     apply_static_arp(net)
 
