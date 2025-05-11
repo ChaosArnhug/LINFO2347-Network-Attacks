@@ -370,10 +370,10 @@ So technically what's going on: well we are preventing mass new unacked connecti
 |------|-----|
 | ws -> ws | ws rate limit drop the packets if too much SYN + tcp stacks protection |
 | ws -> dmz | dmz rate limit drop the packets if too much SYN + tcp stacks protection |
-| ws -> internet | Works but doesn't affect our network directly |
+| ws -> internet | R2 will drop the packets as it is not an established connection |
 | dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection |
 | dmz -> dmz | dmz (attacker) cannot initiate connections + dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection|
-| dmz -> internet | dmz cannot initiate connections |
+| dmz -> internet | dmz cannot initiate connections + R2 will drop the packets as it is not an established connection |
 | internet -> ws | r2 will drop the packets because invalid destination ip |
 | internet -> dmz | dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection |
 
