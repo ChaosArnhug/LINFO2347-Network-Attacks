@@ -1,5 +1,6 @@
 # LINFO2347: Network Attacks Project
 Project by **MEUNIER Arnaud, HENNEN Cyril**
+
 This document provides an overview of the project structure, setup instructions, details about the implemented attacks, how to launch them, and the corresponding defenses using custom topologies. Additionally, it explains the functionality of the basic network protection.
 
 ---
