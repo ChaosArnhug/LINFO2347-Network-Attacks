@@ -214,10 +214,10 @@ sudo python3 ./protections/reflected_ddos/reflected_topo.py
 |------|-----|
 | ws -> ws | r1 will drop the dns response as it is not an established connection |
 | ws -> dmz | dmz will drop the dns response as it doesn't respect the destination port rule (ie: response will not be on port 80 for http server)|
-| ws -> internet | Works but doesn't affect our network directly |
+| ws -> internet | R2 will drop as it is not an established connection|
 | dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection  |
 | dmz -> dmz | dmz (attacker) cannot initiate connections + dmz will drop the dns response as it doesn't respect the destination port rule (ie: response will not be on port 80 for http server) |
-| dmz -> internet | dmz cannot initiate connections |
+| dmz -> internet | dmz cannot initiate connections + R2 will drop the packets as it is not an established connection|
 | internet -> ws | r2 will drop the packets with the added rule |
 | internet -> dmz | r2 will drop the packets with the added rule |
 
