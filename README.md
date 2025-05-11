@@ -28,6 +28,7 @@ LINFO2347/
 │   ├── xmas_scan/             # Xmas scan defense topology and rules
 │   ├── syn_flood/             # SYN flood defense topology and rules
 │   ├── reflected_ddos/        # DNS reflection defense topology and rules
+|   ├── ping_sweep/            # Ping sweep defense topology and rules
 ├── README.md                  # Main documentation
 ├── statement.md               # Project statement
 ├── default_topo.py            # Default Mininet topology
@@ -83,6 +84,10 @@ sudo python3 ./protections/arp_poison/arp_poison_topo.py
 6. **Defense for SYN Flood**:
 ```bash
 sudo python3 ./protections/syn_flood/flood_topo.py
+```
+7. **Defense for Ping Sweep**:
+```bash
+sudo python3 ./protections/ping_sweep/sweep_topo.py
 ```
 
 `NB`: It's recommended to pass the **-E** arg to sudo to preserve the environment variables (since we are dealing with mininet/python)`
@@ -352,3 +357,53 @@ sudo python3 ./protections/syn_flood/flood_topo.py
 | dmz -> internet | dmz cannot initiate connections |
 | internet -> ws | r2 will drop the packets because invalid destination ip |
 | internet -> dmz | dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection |
+
+--- 
+
+### 5. Ping Sweep
+
+#### Attack
+A ping sweep attack sends ICMP echo requests to multiple hosts to discover active devices on a network.
+
+**Steps to Launch**:
+1. Start the default topology:
+```bash
+sudo python3 ./default_topo.py
+```
+2. From the `internet` host, run the Xmas scan:
+```bash
+mininet> internet sudo -E python3 ~/Desktop/LINFO2347/attacks/network_scans.py
+```
+   Select option `1` (ICMP Ping Sweep) and provide the network to scan.
+
+*Note: The attack can be launched from any host, but the `internet` host is used for demonstration purposes.*
+
+**Example Output**:
+
+![Ping sweep not protected](./screenshots/defensless_ping_sweep.jpg)
+
+#### Defense
+To improve the defenses against the ping sweep, add a rule on `r1` to prevent ICMP echo requests comming from the ws to other ip than those 
+authorized in the DMZ (and internet). The basic configuration take care of the rest.
+```nft
+iifname "r1-eth0" ip saddr 10.1.0.0/24 ip protocol icmp icmp type echo-request ip daddr { 10.1.0.0/24, 10.12.0.10; 10.12.0.20, 10.12.0.30, 10.12.0.40, 10.2.0.0/24 } accept;
+```
+**Launch the defense**:
+```bash
+sudo python3 ./protections/ping_sweep/sweep_topo.py
+```
+*Note: this will launch a new topology including the basic_network_protection and the added defenses.*
+
+**Defense summary**:
+| Attacker-Victim | How |
+|------|-----|
+| ws -> ws | Works because of the project requirement |
+| ws -> dmz | r1 will drop the packet pinging unauthorized ip with the added rule |
+| ws -> internet | Works but doesn't affect our network directly |
+| dmz -> ws | dmz cannot initiate connections + r1 will drop the dns response as it is not an established connection |
+| dmz -> dmz | dmz (attacker) cannot initiate connections + r1 will drop the packet + r2 will drop the packets if pinging unauthorized ip |
+| dmz -> internet | dmz cannot initiate connections + r1 will drop the packet + r2 will drop the packets as DMZ ip cannot go out else connection is already established |
+| internet -> ws | r2 drop the packets|
+| internet -> dmz | r2 will drop the packets if pinging unauthorized ip |
+
+---

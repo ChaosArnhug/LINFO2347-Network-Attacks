@@ -1,0 +1,13 @@
+#!/usr/sbin/nft -f
+
+flush ruleset;
+
+table ip r1 {
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+        iifname "r1-eth0" ip saddr 10.1.0.0/24 ip protocol icmp icmp type echo-request ip daddr { 10.1.0.0/24, 10.12.0.10; 10.12.0.20, 10.12.0.30, 10.12.0.40, 10.2.0.0/24 } accept;
+
+        iifname "r1-eth0" ip saddr 10.1.0.0/24 accept;
+        ct state { established, related } accept;
+    }
+}
