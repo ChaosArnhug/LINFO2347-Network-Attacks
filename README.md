@@ -311,8 +311,16 @@ Provide the target IP, port, and number of requests.
 *Note: The attack can be launched from any host, but the `ws2` host is used for demonstration purposes.*
 
 **Example Output**:
+
 ![syn flood](./screenshots/syn_flood.png)
 
+On `http` (target):
+
+`watch -n 1 'ss -tan | grep "SYN-RECV" | wc -l'`
+
+To monitor "every second" the SYN received
+
+We can see that we reach ~255 occupied "temporary" unacked connections. Even though we send more packets (due to timeouts).
 
 #### Defense
 
@@ -320,7 +328,7 @@ Only using nftables to defend against SYN flooding is not enough. The best way t
 
 1. Rate limiter on your hosts for incoming SYN packets:
 ```nft
-tcp flags syn ct state new limit rate 75/second burst 25 packets accept;
+tcp flags syn ct state new limit rate 20/second burst 2 packets accept;
 tcp flags syn ct state new drop;
 ```
 2. Enable SYN cookies on your hosts:
@@ -344,7 +352,18 @@ sudo python3 ./protections/syn_flood/flood_topo.py
 *Note: this will launch a new topology including the basic_network_protection and the added defenses.*
 
 **Example Output**:
-![syn flood](./screenshots/syn_flood_protection.png)
+
+![syn flood](./screenshots/syn_flood_def.png)
+
+On `http` (target):
+
+`watch -n 1 'ss -tan | grep "SYN-RECV" | wc -l'`
+
+To monitor "every second" the SYN received
+
+We can see that we reach ~150 occupied "temporary" unacked connections (which is ~100 less than before). Even though we send more packets (due to timeouts).
+
+So technically what's going on: well we are preventing mass new unacked connections attempts while keeping existing stable connections.
 
 **Defense summary**:
 | Attacker-Victim | How |
@@ -358,7 +377,7 @@ sudo python3 ./protections/syn_flood/flood_topo.py
 | internet -> ws | r2 will drop the packets because invalid destination ip |
 | internet -> dmz | dmz (victim) rate limit drop the packets if too much SYN + tcp stacks protection |
 
---- 
+---
 
 ### 5. Ping Sweep
 
